@@ -1,7 +1,5 @@
 # Daily steps and 6-month healthcare expenditure — estimator from Kato (2026)
 
-[日本語は下にあります](#日本語)
-
 Point estimate and 95% CI of 6-month healthcare expenditure from **daily steps** and **age**, using the
 Generalized Additive Model published in:
 
@@ -72,27 +70,3 @@ python scripts/build_site.py --model steps_cost_gam.pkl --repo-url <this reposit
 ## Citation and license
 
 Please cite the paper above; `CITATION.cff` describes this software. Code and page: MIT. `data/surface_paper.json`: CC BY 4.0.
-
----
-
-## 日本語
-
-Kato (2026, *SSM – Population Health* 35:101958) の一般化加法モデル（GAM）を用いて、**日歩数（月平均）**と**年齢**から
-**6か月医療費の点推定と95%信頼区間**を返すツールです。`docs/index.html`（GitHub Pages）では、入力値を論文 Fig. 4 の
-歩数×年齢曲面の上に赤点で表示します。
-
-**公開するもの**：モデル仕様と学習コード、ページ生成スクリプト、100歩×1歳格子上の推定曲面（モデルの派生集計のみ）、静的ページ。
-**公開しないもの**：個人データ（アスマイル歩数と国保レセプトの連結データ）、学習済みモデルファイル。学習コードは著者環境でのみ実行します。
-
-**使う前に**
-
-- 曲線は選択されたコホート内の観察的な関連であり、歩数を変えたときの医療費変化（介入効果）の推計ではありません。
-- 値は log(Y+1) モデルの逆変換値（幾何平均型）で、6か月医療費の算術平均より大幅に小さく、予算総額の算出には使えません。
-- 95%CI は推定曲線の point-wise 区間（論文 Fig. 2 と同じ）で、個人の予測区間ではありません。
-- 対象年齢は 40–74 歳。歩数・年齢以外の共変量は標本の中央値／最頻値に固定（女性、BMI 22.7、健診なし、過去6か月医療費
-  75,220 円、非宣言期間）。観測の 2.5–97.5 パーセンタイル（845–14,906 歩）の外は外挿として表示します。
-
-**Python から**（pygam 不要）：
-```bash
-python src/steps_cost_estimator.py predict --lookup data/surface_paper.json --steps 8000 --age 68
-```
