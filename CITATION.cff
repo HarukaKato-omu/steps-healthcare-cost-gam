@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this tool, please cite the paper below (preferred-citation) and, optionally, this software."
+type: software
+title: "Daily steps and 6-month healthcare expenditure: estimator from Kato (2026)"
+authors:
+  - family-names: Kato
+    given-names: Haruka
+    affiliation: "Graduate School of Human Life and Ecology, Osaka Metropolitan University"
+version: 1.0.0
+date-released: 2026-10-01
+license: MIT
+repository-code: "https://github.com/harukakato/steps-healthcare-cost-gam"
+keywords:
+  - daily steps
+  - healthcare expenditures
+  - mHealth
+  - generalized additive models
+  - Osaka
+preferred-citation:
+  type: article
+  title: "Non-linear association between mHealth-measured daily steps and subsequent healthcare expenditures among long-term app users in Osaka, Japan"
+  authors:
+    - family-names: Kato
+      given-names: Haruka
+  journal: "SSM - Population Health"
+  volume: 35
+  start: 101958
+  year: 2026
+  doi: 10.1016/j.ssmph.2026.101958

@@ -1,0 +1,12 @@
+# Never commit individual-level data or fitted pickles
+*.pkl
+*.pickle
+12_*.csv
+*uuid*.csv
+*歩数医療費*
+training_log.txt
+
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
