@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 """
-build_site.py — 学習済みモデル（paper バリアント）から
-  data/surface_paper.json            歩数 × 年齢 の予測曲面（点推定・95%CI）+ メタデータ
-  docs/index.html                    GitHub Pages 用の静的ページ（template.html に JSON を埋め込む）
-を生成する。学習データ・pickle はリポジトリに含めない（このスクリプトは著者環境でのみ実行）。
+build_site.py - build the public artefacts from the fitted model (paper variant):
+  data/fitted_surface_grid.json   fitted steps x age surface (point estimate, 95% CI) + metadata
+  docs/index.html                 GitHub Pages page (docs/template.html with the grid embedded)
 
-使い方:  python scripts/build_site.py --model /path/to/steps_cost_gam.pkl
+The person-month panel and the fitted model file are not part of the repository; this script runs in
+the author's environment only.
+
+Usage:  python scripts/build_site.py --model /path/to/steps_cost_gam.pkl [--steps-max 20000] [--repo-url URL]
 """
 import argparse
 import json
@@ -19,22 +21,27 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 from steps_cost_estimator import StepsCostEstimator  # noqa: E402
 
-AGE_MIN, AGE_MAX = 40, 74        # 公開ツールの有効年齢（75 歳以上は制度移行によりデータ不完全）
-STEPS_STEP = 100                 # 歩数グリッド刻み
-VARIANT = "paper"                # 論文と同一の標本で学習したモデル
+AGE_MIN, AGE_MAX = 40, 74        # age range of the public tool (claims end at 75: insurance switch)
+STEPS_STEP = 100                 # grid spacing for steps
+STEPS_MAX = 20000                # upper limit of the public tool (data-dense range ends at ~14,906)
+VARIANT = "paper"                # the model fitted on the paper's own sample
+GRID_JSON = ROOT / "data" / "fitted_surface_grid.json"
+TEMPLATE = ROOT / "docs" / "template.html"
+PAGE = ROOT / "docs" / "index.html"
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--model", required=True)
-    ap.add_argument("--repo-url", default="https://github.com/harukakato/steps-healthcare-cost-gam")
-    ap.add_argument("--fragment", default=None, help="skeleton-less copy of the page (for artifact preview)")
+    ap.add_argument("--model", required=True, help="fitted model file written by steps_cost_estimator.py fit")
+    ap.add_argument("--repo-url", default="https://github.com/HarukaKato-omu/steps-healthcare-cost-gam")
+    ap.add_argument("--steps-max", type=float, default=STEPS_MAX)
+    ap.add_argument("--fragment", default=None, help="also write the page without the HTML skeleton (preview use)")
     a = ap.parse_args()
 
     est = StepsCostEstimator.load(a.model)
     sub = est.models[VARIANT]
     info = sub.info
-    upper = float(info.steps_upper)
+    upper = min(float(info.steps_upper), a.steps_max)
 
     steps = list(range(0, int(upper // STEPS_STEP) * STEPS_STEP + 1, STEPS_STEP))
     if steps[-1] < upper - 1:
@@ -52,7 +59,8 @@ def main():
         n_person_months=info.n_person_months, n_individuals=info.n_individuals,
         analysis_period=f"{info.analysis_start[:7]} to {info.analysis_end[:7]}",
         pseudo_r2=round(info.pseudo_r2, 4), aic=round(info.aic), edof=round(info.edof_total, 1),
-        steps_upper=round(upper), steps_dense=[round(info.steps_dense[0]), round(info.steps_dense[1])],
+        steps_upper=round(upper), steps_upper_paper=round(float(info.steps_upper)),
+        steps_dense=[round(info.steps_dense[0]), round(info.steps_dense[1])],
         age_range=[AGE_MIN, AGE_MAX],
         fixed_covariates={k: (round(v, 1) if k == "BMI" else round(v)) for k, v in info.fixed_covariates.items()
                           if k not in ("Steps", "Age")},
@@ -65,25 +73,26 @@ def main():
     )
     surface = dict(meta=meta, steps=steps, ages=ages, point=mat("point"), lower=mat("lower"), upper=mat("upper"))
 
-    (ROOT / "data").mkdir(exist_ok=True)
-    with open(ROOT / "data" / "surface_paper.json", "w", encoding="utf-8") as fh:
+    GRID_JSON.parent.mkdir(exist_ok=True)
+    with open(GRID_JSON, "w", encoding="utf-8") as fh:
         json.dump(surface, fh, ensure_ascii=False, separators=(",", ":"))
-    template = (ROOT / "docs" / "template.html").read_text(encoding="utf-8")
+
+    template = TEMPLATE.read_text(encoding="utf-8")
     payload = json.dumps(surface, ensure_ascii=False, separators=(",", ":"))
     assert "/*__SURFACE_JSON__*/" in template and "/*__REPO_URL__*/" in template
     fragment = template.replace("/*__SURFACE_JSON__*/", payload).replace("/*__REPO_URL__*/", a.repo_url)
+    head, rest = fragment.split("<style>", 1)
+    style, body = rest.split("</style>", 1)
     full = ("<!doctype html>\n<html lang=\"en\">\n<head>\n<meta charset=\"utf-8\">\n"
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1, viewport-fit=cover\">\n"
             "<meta name=\"description\" content=\"Point estimate and 95% CI of 6-month healthcare expenditure from daily steps and age, "
             "from the GAM in Kato (2026), SSM - Population Health.\">\n"
-            + fragment.split("<style>")[0]          # <title> + font link
-            + "<style>" + fragment.split("<style>", 1)[1].split("</style>")[0] + "</style>\n</head>\n<body>\n"
-            + fragment.split("</style>", 1)[1] + "\n</body>\n</html>\n")
-    (ROOT / "docs" / "index.html").write_text(full, encoding="utf-8")
+            + head + "<style>" + style + "</style>\n</head>\n<body>\n" + body + "\n</body>\n</html>\n")
+    PAGE.write_text(full, encoding="utf-8")
     if a.fragment:
         Path(a.fragment).write_text(fragment, encoding="utf-8")
-    print(f"surface grid: {len(steps)} steps × {len(ages)} ages → data/surface_paper.json, "
-          f"docs/index.html ({len(full)/1024:.0f} KB)")
+    print(f"grid: {len(steps)} steps x {len(ages)} ages -> {GRID_JSON.relative_to(ROOT)}, "
+          f"{PAGE.relative_to(ROOT)} ({len(full)/1024:.0f} KB)")
 
 
 if __name__ == "__main__":
