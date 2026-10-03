@@ -1,11 +1,18 @@
-# Never commit individual-level data or fitted pickles
+# Data are never committed: the person-month panel (A-Smile steps linked to insurance claims)
+# stays in the author's environment. Only the schema and the fitted-surface grid are tracked.
+data/*
+*.csv
+!data/schema.csv
+!data/fitted_surface_grid.json
+*.xlsx
+*.xlsm
+
+# Fitted model files (version-bound pickles) and training logs
 *.pkl
 *.pickle
-12_*.csv
-*uuid*.csv
-*歩数医療費*
 training_log.txt
 
+# Python
 __pycache__/
 *.pyc
 .ipynb_checkpoints/
