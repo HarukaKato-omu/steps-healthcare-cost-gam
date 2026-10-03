@@ -93,8 +93,8 @@ footer { margin-top: 28px; font-size: 13px; color: var(--muted); border-top: 1px
       <h2 id="inputs-h" data-i18n="inputs">Inputs</h2>
       <div class="field">
         <label for="steps-num" data-i18n="steps">Daily steps (monthly average)</label>
-        <input type="number" id="steps-num" min="0" max="22119" step="100" value="8000">
-        <input type="range" id="steps-rng" min="0" max="22119" step="50" value="8000" aria-label="Daily steps">
+        <input type="number" id="steps-num" min="0" max="20000" step="100" value="8000">
+        <input type="range" id="steps-rng" min="0" max="20000" step="50" value="8000" aria-label="Daily steps">
         <div class="scale"><span>0</span><span id="dense-lo-lbl"></span><span id="dense-hi-lbl"></span><span id="steps-max-lbl"></span></div>
       </div>
       <div class="field">
@@ -128,7 +128,7 @@ footer { margin-top: 28px; font-size: 13px; color: var(--muted); border-top: 1px
     <ul>
       <li data-i18n="how1">An observed association in one selected cohort (long-term A-Smile users aged 40+ in Osaka, 2020–2023), not the effect of changing a person's steps.</li>
       <li data-i18n="how2">A back-transformed log-model prediction (geometric-mean type), far below the arithmetic mean; not for budget totals. The 95% CI is point-wise for the curve, not for an individual.</li>
-      <li data-i18n="how3">Ages 40–74; other covariates fixed at the sample median/mode. Steps outside 845–14,906/day are extrapolated.</li>
+      <li data-i18n="how3">Ages 40–74 and 0–20,000 steps/day (the paper interprets the curve only within the data-dense range, 845–14,906 steps/day); other covariates fixed at the sample median/mode.</li>
       <li><span data-i18n="data5">Source:</span> Kato H. (2026). <em>SSM – Population Health</em>, 35, 101958. <a href="https://doi.org/10.1016/j.ssmph.2026.101958" target="_blank" rel="noopener">doi:10.1016/j.ssmph.2026.101958</a></li>
     </ul>
   </section>
@@ -154,7 +154,7 @@ const I18N = {
     howTitle: "How to read this",
     how1: "An observed association in one selected cohort (long-term A-Smile users aged 40+ in Osaka, 2020–2023), not the effect of changing a person's steps.",
     how2: "A back-transformed log-model prediction (geometric-mean type), far below the arithmetic mean; not for budget totals. The 95% CI is point-wise for the curve, not for an individual.",
-    how3: "Ages 40–74; other covariates fixed at the sample median/mode. Steps outside 845–14,906/day are extrapolated.",
+    how3: "Ages 40–74 and 0–20,000 steps/day (the paper interprets the curve only within the data-dense range, 845–14,906 steps/day); other covariates fixed at the sample median/mode.",
     data5: "Source:", footer: "Code and build scripts:",
     dense: "Within the data-dense range (2.5–97.5th percentile of observed steps)",
     sparse: "Outside the data-dense range: extrapolated, interpret with caution",
@@ -174,7 +174,7 @@ const I18N = {
     howTitle: "読み方",
     how1: "選択されたコホート（大阪府のアスマイル長期利用者、40歳以上、2020–2023年）における観察的な関連であり、歩数を変えたときの効果ではありません。",
     how2: "log モデルの逆変換値（幾何平均型）で算術平均よりはるかに小さく、予算総額には使えません。95%信頼区間は曲線の point-wise 区間で、個人の予測区間ではありません。",
-    how3: "対象年齢は40–74歳。他の共変量は標本の中央値／最頻値に固定。845–14,906歩/日の外は外挿です。",
+    how3: "対象は40–74歳、0–20,000歩/日（論文はデータ密な範囲 845–14,906歩/日に解釈を限定）。他の共変量は標本の中央値／最頻値に固定。",
     data5: "出典：", footer: "コードと生成スクリプト：",
     dense: "データ密な範囲内（観測歩数の2.5–97.5パーセンタイル）",
     sparse: "データ密な範囲外：外挿のため解釈に注意",
@@ -185,7 +185,8 @@ const I18N = {
   }
 };
 let lang = "en";
-try { lang = localStorage.getItem("lang") === "ja" ? "ja" : (navigator.language || "").startsWith("ja") ? "ja" : "en"; } catch (e) {}
+// English by default; a viewer's explicit choice is remembered in this browser only
+try { if (localStorage.getItem("lang") === "ja") lang = "ja"; } catch (e) {}
 
 const M = SURFACE.meta, STEPS = SURFACE.steps, AGES = SURFACE.ages;
 const L = (m) => m.map(r => r.map(v => Math.log1p(v)));
@@ -226,7 +227,8 @@ function applyLang() {
   parts.push(`${T.fixed.COVID19} ${fx.COVID19 ? T.yes : T.no}`);
   $("fixed-list").innerHTML = parts.map(p => `<span>${p}</span>`).join(" · ");
   $("built").textContent = `${T.built} ${M.built}`;
-  $("dense-lo-lbl").textContent = fmt(M.steps_dense[0]); $("dense-hi-lbl").textContent = fmt(M.steps_dense[1]);
+  $("dense-lo-lbl").textContent = fmt(M.steps_dense[0]);
+  $("dense-hi-lbl").textContent = M.steps_dense[1] < 0.9 * M.steps_upper ? fmt(M.steps_dense[1]) : "";
   $("steps-max-lbl").textContent = fmt(M.steps_upper);
   try { localStorage.setItem("lang", lang); } catch (e) {}
 }
@@ -259,7 +261,7 @@ function drawSurface(q, r) {
   const layout = {
     margin: { l: 0, r: 0, t: 0, b: 0 }, paper_bgcolor: "rgba(0,0,0,0)", font: { family: tok("--font-body"), color: fg },
     scene: { xaxis: ax(T.axSteps), yaxis: { ...ax(T.axAge), tickformat: "d" }, zaxis: ax(T.axCost),
-      camera: { eye: { x: 1.35, y: -1.45, z: 0.6 } }, aspectratio: { x: 1.45, y: 1.05, z: 0.8 } },
+      camera: { eye: { x: 1.4, y: -1.5, z: 0.65 } }, aspectratio: { x: 1.35, y: 1.05, z: 0.8 } },
     hoverlabel: { font: { family: tok("--font-mono"), size: 12 } }
   };
   Plotly.react("surface", data, layout, { displayModeBar: false, responsive: true });
