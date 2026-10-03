@@ -5,11 +5,16 @@ title: "Daily steps and 6-month healthcare expenditure: estimator from Kato (202
 authors:
   - family-names: Kato
     given-names: Haruka
-    affiliation: "Graduate School of Human Life and Ecology, Osaka Metropolitan University"
+    affiliation: "Osaka Metropolitan University"
+    orcid: "https://orcid.org/0000-0003-0831-1543"
 version: 1.0.0
 date-released: 2026-10-01
 license: MIT
-repository-code: "https://github.com/harukakato/steps-healthcare-cost-gam"
+repository-code: "https://github.com/HarukaKato-omu/steps-healthcare-cost-gam"
+url: "https://harukakato-omu.github.io/steps-healthcare-cost-gam/"
+# identifiers:
+#   - type: doi
+#     value: "10.5281/zenodo.XXXXXXX"   # add the Zenodo DOI on release
 keywords:
   - daily steps
   - healthcare expenditures
@@ -22,6 +27,8 @@ preferred-citation:
   authors:
     - family-names: Kato
       given-names: Haruka
+      affiliation: "Osaka Metropolitan University"
+      orcid: "https://orcid.org/0000-0003-0831-1543"
   journal: "SSM - Population Health"
   volume: 35
   start: 101958
